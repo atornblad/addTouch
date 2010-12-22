@@ -2,11 +2,11 @@
     window._addTouch = {};
     var a = window._addTouch;
     a.init = function () {
-        //        window.alert("Hej!");
     };
     a.touches = {};
     a.nextTouchId = 1;
     a.currentTouch = null;
+    a.wiggleInSync = false;
     a.raiseByMethod = function (methodname, node, e) {
         while (node) {
             if (typeof node[methodname] == "function") {
@@ -20,7 +20,56 @@
             node = parent;
         }
     };
+    a.contextMenuItemClick = function() {
+        if (a.contextMenu) {
+            document.documentElement.removeChild(a.contextMenu);
+            delete a.contextMenu;
+        }
+        if (this.id == "_addTouch_wiggle") {
+            a.wiggleInSync = !a.wiggleInSync;
+            window.alert("Wiggle in sync is now " + (a.wiggleInSync ? "ON" : " OFF"));
+        }
+    };
+    a.showContextMenu = function(event) {
+        if (a.contextMenu) {
+            document.documentElement.removeChild(a.contextMenu);
+            delete a.contextMenu;
+        }
+        if (a.currentTouch) {
+            a.currentTouch._addTouchDiv.className = "_addTouchSpot";
+            a.currentTouch = null;
+        }
+        var ul = document.createElement("UL");
+        ul.id = "_addTouchMenu";
+        var li0 = document.createElement("LI");
+        var a0 = document.createElement("A");
+        a0.appendChild(document.createTextNode("Wiggle in sync"));
+        ul.appendChild(li0);
+        li0.appendChild(a0);
+        a0.href = "#";
+        a0.id = "_addTouch_wiggle";
+        if (a.wiggleInSync) {
+            a0.className = "_addTouchSelected";
+        }
+        a0.onclick = a.contextMenuItemClick;
+        a.contextMenu = ul;
+        ul.style.left = (event.pageX - 4) + "px";
+        ul.style.top = (event.pageY - 4) + "px";
+        document.documentElement.appendChild(ul);
+        return false;
+    };
     a.mousedown = function (event) {
+        if (a.contextMenu && event.target.parentNode && event.target.parentNode.parentNode == a.contextMenu) {
+            return true;
+        }
+        if (event.button == 2 || event.shiftKey) {
+            a.showContextMenu(event);
+            return;
+        }
+        if (a.contextMenu) {
+            document.documentElement.removeChild(a.contextMenu);
+            delete a.contextMenu;
+        }
         var target = event.target;
         for (var key in a.touches) {
             var t = a.touches[key];
@@ -108,6 +157,9 @@
     a.mousemove = function (event) {
         if (a.currentTouch) {
             var t = a.currentTouch;
+            var dx = t.screenX - event.pageX;
+            var dy = t.screenY - event.pageY;
+            var speed = Math.sqrt(dx * dx + dy * dy);
             t.clientX = event.clientX;
             t.clientY = event.clientY;
             t.pageX = event.pageX;
@@ -124,10 +176,46 @@
             e.targetTouches = [t];
             e.touches = [];
             for (var key in a.touches) {
-                e.touches.push(a.touches[key]);
+                if (a.touches[key]._target == t._target)
+                    e.touches.push(a.touches[key]);
             }
-            t._target.dispatchEvent(e);
+            t._target.dispatchEvent.call(t._target, e);
             a.raiseByMethod("ontouchmove", t._target, e);
+            
+            if (a.wiggleInSync) {
+                var index = 0;
+                var tick = (new Date()).getTime();
+                for (var key in a.touches) {
+                    var touch = a.touches[key];
+                    if (a.currentTouch != touch) {
+                        var radians = ((tick + index * 150) % 1000) * 0.002 * Math.PI;
+                        var offsetX = speed * 0.5 * Math.sin(radians);
+                        var offsetY = speed * 0.5 * Math.cos(radians);
+                        touch.clientX += offsetX;
+                        touch.clientY += offsetY;
+                        touch.pageX += offsetX;
+                        touch.pageY += offsetY;
+                        touch.screenX += offsetX;
+                        touch.screenY += offsetY;
+                        var div = touch._addTouchDiv;
+                        div.style.left = (touch.pageX - 12) + "px";
+                        div.style.top = (touch.pageY - 12) + "px";
+                        var e = document.createEvent("HTMLEvents");
+                        e.initEvent("touchmove", true, true);
+                        e.altKey = event.altKey;
+                        e.changedTouches = [touch];
+                        e.targetTouches = [touch];
+                        e.touches = [];
+                        for (var key in a.touches) {
+                            if (a.touches[key]._target == touch._target)
+                                e.touches.push(a.touches[key]);
+                        }
+                        touch._target.dispatchEvent.call(touch._target, e);
+                        a.raiseByMethod("ontouchmove", touch._target, e);
+                        ++index;
+                    }
+                }
+            }
         }
         return false;
     };
@@ -149,5 +237,6 @@
     window.onmousedown = a.mousedown;
     window.onmousemove = a.mousemove;
     window.onmouseup = a.mouseup;
+    window.oncontextmenu = function() { return false; };
     document.addEventListener("DOMContentLoaded", a.init);
 }

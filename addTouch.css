@@ -1,0 +1,55 @@
+﻿div._addTouchSpot {
+    position: absolute;
+    margin: 0px;
+    padding: 0px;
+    border: solid 2px rgba(0, 0, 0, 0.5);
+    background-color: rgba(255, 255, 255, 0.5);
+    width: 20px;
+    height: 20px;
+    border-radius: 20px;
+    z-index: 2147483647;
+}
+div._addTouchSpot:hover {
+    border-color: #58f;
+    background-color: rgba(192, 224, 255, 0.5);
+}
+div._addTouchSpot._addTouchCurrent {
+    border-color: #f00;
+    background-color: rgba(255, 128, 128, 0.5);
+}
+ul#_addTouchMenu {
+    position: absolute;
+    list-style-type: none;
+    list-style-position: inside;
+    margin: 0px;
+    padding: 0px;
+    border: solid 1px #000;
+    box-shadow: 0px 0px 2px #fff;
+    text-indent: 0px;
+}
+ul#_addTouchMenu li {
+    margin: 0px;
+    padding: 0px;
+    text-indent: 0px;
+    border-top: solid 1px #777;
+}
+ul#_addTouchMenu li:first-child {
+    border-top: none 0px;
+}
+ul#_addTouchMenu li a {
+    display: block;
+    padding: 1px 4px;
+    margin: 0px;
+    background: #ddd;
+    color: #333;
+    text-decoration: none;
+    font-family: Helvetica, "Segoe UI", Calibri, Arial, sans-serif;
+    width: 10em;
+}
+ul#_addTouchMenu li a._addTouchSelected {
+    font-weight: bold;
+}
+ul#_addTouchMenu li a:hover {
+    background: #fff;
+    color: #000;
+}
