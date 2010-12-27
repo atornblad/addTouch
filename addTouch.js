@@ -1,12 +1,42 @@
-﻿if (!window._addTouch && window.location.search.indexOf("_addTouch=webkit") != -1) {
+﻿if (!window._addTouch)
+(function() {
+    var search = window.location.search.substr(1);
+    var searchPartsPattern = new RegExp("([^=&]+)=([^&]+)");
+    var match = searchPartsPattern.exec(search);
+    var addTouchValue = false;
+    while (match) {
+        var key = match[1];
+        if (key == "_addTouch") {
+            addTouchValue = match[2];
+            match = false;
+        } else {
+            match = searchPartsPattern.exec(search);
+        }
+    }
+
+    if (!addTouchValue) { return };
+    
     window._addTouch = {};
     var a = window._addTouch;
+    a.emulation = addTouchValue;
     a.init = function () {
+        window.setInterval(a.ownTheMouse, 500);
+    };
+    a.ownTheMouse = function() {
+        window.onmousedown = a.mousedown;
+        window.onmousemove = a.mousemove;
+        window.onmouseup = a.mouseup;
+    };
+    a.mode = {
+        normal : true,
+        wiggle : false,
+        zoom : false,
+        pan : false,
+        tap : false
     };
     a.touches = {};
     a.nextTouchId = 1;
     a.currentTouch = null;
-    a.wiggleInSync = false;
     a.raiseByMethod = function (methodname, node, e) {
         while (node) {
             if (typeof node[methodname] == "function") {
@@ -25,10 +55,26 @@
             document.documentElement.removeChild(a.contextMenu);
             delete a.contextMenu;
         }
-        if (this.id == "_addTouch_wiggle") {
-            a.wiggleInSync = !a.wiggleInSync;
-            window.alert("Wiggle in sync is now " + (a.wiggleInSync ? "ON" : " OFF"));
+        var command = this.id.substr(10);
+        for (var key in a.mode) {
+            if (a.mode.hasOwnProperty(key)) {
+                a.mode[key] = (key == command);
+            }
         }
+    };
+    a.createContextMenuItem = function(ul, text, command) {
+        var li = document.createElement("LI");
+        var aa = document.createElement("A");
+        aa.appendChild(document.createTextNode(text));
+        aa.href = "#";
+        aa.id = "_addTouch_" + command;
+        li.appendChild(aa);
+        if (a.mode[command]) {
+            aa.className = "_addTouchSelected";
+        }
+        aa.onclick = a.contextMenuItemClick;
+        a.contextMenu = ul;
+        ul.appendChild(li);
     };
     a.showContextMenu = function(event) {
         if (a.contextMenu) {
@@ -41,18 +87,11 @@
         }
         var ul = document.createElement("UL");
         ul.id = "_addTouchMenu";
-        var li0 = document.createElement("LI");
-        var a0 = document.createElement("A");
-        a0.appendChild(document.createTextNode("Wiggle in sync"));
-        ul.appendChild(li0);
-        li0.appendChild(a0);
-        a0.href = "#";
-        a0.id = "_addTouch_wiggle";
-        if (a.wiggleInSync) {
-            a0.className = "_addTouchSelected";
-        }
-        a0.onclick = a.contextMenuItemClick;
-        a.contextMenu = ul;
+        a.createContextMenuItem(ul, "Normal", "normal");
+//        a.createContextMenuItem(ul, "Tap", "tap");
+        a.createContextMenuItem(ul, "Wiggle", "wiggle");
+//        a.createContextMenuItem(ul, "Zoom", "zoom");
+//        a.createContextMenuItem(ul, "Pan", "pan");
         ul.style.left = (event.pageX - 4) + "px";
         ul.style.top = (event.pageY - 4) + "px";
         document.documentElement.appendChild(ul);
@@ -81,19 +120,36 @@
                 if (event.ctrlKey) {
                     div.parentNode.removeChild(div);
                     delete div;
-                    var e = document.createEvent("HTMLEvents");
-                    e.initEvent("touchend", true, true);
-                    e.altKey = event.altKey;
-                    e.changedTouches = [t];
-                    e.targetTouches = [t];
-                    e.touches = [];
-                    for (var key2 in a.touches) {
-                        if (key2 != key) {
-                            e.touches.push(a.touches[key2]);
+                    if (a.emulation == "webkit") {
+                        var e = document.createEvent("HTMLEvents");
+                        e.initEvent("touchend", true, true);
+                        e.altKey = event.altKey;
+                        e.changedTouches = [t];
+                        e.targetTouches = [t];
+                        e.touches = [];
+                        for (var key2 in a.touches) {
+                            if (key2 != key) {
+                                e.touches.push(a.touches[key2]);
+                            }
                         }
+                        target.dispatchEvent(e);
+                        a.raiseByMethod("ontouchend", target, e);
+                    } else if (a.emulation == "mozilla") {
+                        var e = document.createEvent("HTMLEvents");
+                        e.initEvent("MozTouchUp", true, true);
+                        e.altKey = event.altKey;
+                        e.streamId = t.streamId;
+                        e.mozInputSource = 5;
+                        e.clientX = t.clientX;
+                        e.clientY = t.clientY;
+                        e.pageX = t.pageX;
+                        e.pageY = t.pageY;
+                        e.screenX = t.screenX;
+                        e.screenY = t.screenY;
+                        e.target = target;
+                        target.dispatchEvent(e);
+                        a.raiseByMethod("onMozTouchUp", target, e);
                     }
-                    target.dispatchEvent(e);
-                    a.raiseByMethod("ontouchend", target, e);
                     delete a.touches[key];
                     return false;
                 }
@@ -107,18 +163,36 @@
                 div.style.left = (event.pageX - 12) + "px";
                 div.style.top = (event.pageY - 12) + "px";
                 a.currentTouch = t;
-                var e = document.createEvent("HTMLEvents");
-                e.initEvent("touchmove", true, true);
-                e.altKey = event.altKey;
-                e.changedTouches = [t];
-                e.targetTouches = [t];
-                e.touches = [];
-                for (var key2 in a.touches) {
-                    e.touches.push(a.touches[key2]);
+                if (a.emulation == "webkit") {
+                    var e = document.createEvent("HTMLEvents");
+                    e.initEvent("touchmove", true, true);
+                    e.altKey = event.altKey;
+                    e.changedTouches = [t];
+                    e.targetTouches = [t];
+                    e.touches = [];
+                    for (var key2 in a.touches) {
+                        e.touches.push(a.touches[key2]);
+                    }
+                    target.dispatchEvent(e);
+                    a.raiseByMethod("ontouchmove", target, e);
+                    return false;
+                } else if (a.emulation == "mozilla") {
+                    var e = document.createEvent("HTMLEvents");
+                    e.initEvent("MozTouchMove", true, true);
+                    e.altKey = event.altKey;
+                    e.streamId = t.streamId;
+                    e.mozInputSource = 5;
+                    e.clientX = t.clientX;
+                    e.clientY = t.clientY;
+                    e.pageX = t.pageX;
+                    e.pageY = t.pageY;
+                    e.screenX = t.screenX;
+                    e.screenY = t.screenY;
+                    e.target = target;
+                    target.dispatchEvent(e);
+                    a.raiseByMethod("onMozTouchMove", target, e);
+                    return false;
                 }
-                target.dispatchEvent(e);
-                a.raiseByMethod("ontouchmove", target, e);
-                return false;
             }
         }
         target = event.target;
@@ -132,6 +206,7 @@
             screenY: event.pageY,
             _target: target
         };
+        touch.streamId = touch.identifier;
         a.touches["id_" + touch.identifier] = touch;
         var div = document.createElement("DIV");
         touch._addTouchDiv = div;
@@ -141,18 +216,36 @@
         div.style.top = (event.pageY - 12) + "px";
         document.body.appendChild(div);
         a.currentTouch = touch;
-        var e = document.createEvent("HTMLEvents");
-        e.initEvent("touchstart", true, true);
-        e.altKey = event.altKey;
-        e.changedTouches = [touch];
-        e.targetTouches = [touch];
-        e.touches = [];
-        for (var key in a.touches) {
-            e.touches.push(a.touches[key]);
+        if (a.emulation == "webkit") {
+            var e = document.createEvent("HTMLEvents");
+            e.initEvent("touchstart", true, true);
+            e.altKey = event.altKey;
+            e.changedTouches = [touch];
+            e.targetTouches = [touch];
+            e.touches = [];
+            for (var key in a.touches) {
+                e.touches.push(a.touches[key]);
+            }
+            target.dispatchEvent(e);
+            a.raiseByMethod("ontouchstart", target, e);
+            return false;
+        } else if (a.emulation == "mozilla") {
+            var e = document.createEvent("HTMLEvents");
+            e.initEvent("MozTouchDown", true, true);
+            e.altKey = event.altKey;
+            e.streamId = touch.streamId;
+            e.mozInputSource = 5;
+            e.clientX = touch.clientX;
+            e.clientY = touch.clientY;
+            e.pageX = touch.pageX;
+            e.pageY = touch.pageY;
+            e.screenX = touch.screenX;
+            e.screenY = touch.screenY;
+            e.target = target;
+            target.dispatchEvent(e);
+            a.raiseByMethod("onMozTouchDown", target, e);
+            return false;
         }
-        target.dispatchEvent(e);
-        a.raiseByMethod("ontouchstart", target, e);
-        return false;
     };
     a.mousemove = function (event) {
         if (a.currentTouch) {
@@ -169,20 +262,41 @@
             var div = t._addTouchDiv;
             div.style.left = (event.pageX - 12) + "px";
             div.style.top = (event.pageY - 12) + "px";
-            var e = document.createEvent("HTMLEvents");
-            e.initEvent("touchmove", true, true);
-            e.altKey = event.altKey;
-            e.changedTouches = [t];
-            e.targetTouches = [t];
-            e.touches = [];
-            for (var key in a.touches) {
-                if (a.touches[key]._target == t._target)
-                    e.touches.push(a.touches[key]);
+            if (a.emulation == "webkit") {
+                var e = document.createEvent("HTMLEvents");
+                e.initEvent("touchmove", true, true);
+                e.altKey = event.altKey;
+                e.changedTouches = [t];
+                e.targetTouches = [t];
+                e.touches = [];
+                for (var key in a.touches) {
+                    if (a.touches[key]._target == t._target)
+                        e.touches.push(a.touches[key]);
+                }
+                t._target.dispatchEvent.call(t._target, e);
+                a.raiseByMethod("ontouchmove", t._target, e);
+            } else if (a.emulation == "mozilla") {
+                var e = document.createEvent("HTMLEvents");
+                e.initEvent("MozTouchMove", true, true);
+                e.altKey = event.altKey;
+                e.streamId = t.streamId;
+                e.mozInputSource = 5;
+                e.clientX = t.clientX;
+                e.clientY = t.clientY;
+                e.pageX = t.pageX;
+                e.pageY = t.pageY;
+                e.screenX = t.screenX;
+                e.screenY = t.screenY;
+                e.target = t._target;
+                t._target.dispatchEvent.call(t._target, e);
+                a.raiseByMethod("onMozTouchMove", t._target, e);
             }
-            t._target.dispatchEvent.call(t._target, e);
-            a.raiseByMethod("ontouchmove", t._target, e);
             
-            if (a.wiggleInSync) {
+            if (a.mode.zoom) {
+                
+            } else if (a.mode.pan) {
+                
+            } else if (a.mode.wiggle) {
                 var index = 0;
                 var tick = (new Date()).getTime();
                 for (var key in a.touches) {
@@ -200,18 +314,35 @@
                         var div = touch._addTouchDiv;
                         div.style.left = (touch.pageX - 12) + "px";
                         div.style.top = (touch.pageY - 12) + "px";
-                        var e = document.createEvent("HTMLEvents");
-                        e.initEvent("touchmove", true, true);
-                        e.altKey = event.altKey;
-                        e.changedTouches = [touch];
-                        e.targetTouches = [touch];
-                        e.touches = [];
-                        for (var key in a.touches) {
-                            if (a.touches[key]._target == touch._target)
-                                e.touches.push(a.touches[key]);
+                        if (a.emulation == "webkit") {
+                            var e = document.createEvent("HTMLEvents");
+                            e.initEvent("touchmove", true, true);
+                            e.altKey = event.altKey;
+                            e.changedTouches = [touch];
+                            e.targetTouches = [touch];
+                            e.touches = [];
+                            for (var key in a.touches) {
+                                if (a.touches[key]._target == touch._target)
+                                    e.touches.push(a.touches[key]);
+                            }
+                            touch._target.dispatchEvent.call(touch._target, e);
+                            a.raiseByMethod("ontouchmove", touch._target, e);
+                        } else if (a.emulation == "mozilla") {
+                            var e = document.createEvent("HTMLEvents");
+                            e.initEvent("MozTouchMove", true, true);
+                            e.altKey = event.altKey;
+                            e.streamId = touch.streamId;
+                            e.mozInputSource = 5;
+                            e.clientX = touch.clientX;
+                            e.clientY = touch.clientY;
+                            e.pageX = touch.pageX;
+                            e.pageY = touch.pageY;
+                            e.screenX = touch.screenX;
+                            e.screenY = touch.screenY;
+                            e.target = touch._target;
+                            touch._target.dispatchEvent.call(touch._target, e);
+                            a.raiseByMethod("onMozTouchMove", touch._target, e);
                         }
-                        touch._target.dispatchEvent.call(touch._target, e);
-                        a.raiseByMethod("ontouchmove", touch._target, e);
                         ++index;
                     }
                 }
@@ -226,17 +357,31 @@
         }
         return false;
     };
-    var targets = [window, document, document.documentElement];
-    var properties = "ontouchstart,ontouchmove,ontouchend,ongesturestart,ongesturechange,ongestureend".split(/,/g);
-    for (var i = 0, l = targets.length; i < l; ++i) {
-        for (var j = 0, k = properties.length; j < k; ++j) {
-            targets[i][properties[j]] = null;
+    if (addTouchValue == "webkit") {
+        var targets = [window, document, document.documentElement];
+        var properties = "ontouchstart,ontouchmove,ontouchend,ongesturestart,ongesturechange,ongestureend".split(/,/g);
+        for (var i = 0, l = targets.length; i < l; ++i) {
+            for (var j = 0, k = properties.length; j < k; ++j) {
+                targets[i][properties[j]] = null;
+            }
         }
+        window.Touch = true;
+        window.onmousedown = a.mousedown;
+        window.onmousemove = a.mousemove;
+        window.onmouseup = a.mouseup;
+    } else if (addTouchValue == "mozilla") {
+        var targets = [window, document, document.documentElement];
+        var properties = "MozTouchDown,onMozTouchDown,MozTouchMove,onMozTouchMove,MozTouchRelease,onMozTouchRelease".split(/,/g);
+        for (var i = 0, l = targets.length; i < l; ++i) {
+            for (var j = 0, k = properties.length; j < k; ++j) {
+                targets[i][properties[j]] = null;
+            }
+        }
+        window.multitouchData = false;
+        window.onmousedown = a.mousedown;
+        window.onmousemove = a.mousemove;
+        window.onmouseup = a.mouseup;
     }
-    window.Touch = true;
-    window.onmousedown = a.mousedown;
-    window.onmousemove = a.mousemove;
-    window.onmouseup = a.mouseup;
     window.oncontextmenu = function() { return false; };
-    document.addEventListener("DOMContentLoaded", a.init);
-}
+    document.addEventListener("DOMContentLoaded", a.init, false);
+})();

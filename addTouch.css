@@ -38,18 +38,24 @@ ul#_addTouchMenu li:first-child {
 }
 ul#_addTouchMenu li a {
     display: block;
-    padding: 1px 4px;
+    padding: 1px 4px 1px 20px;
     margin: 0px;
-    background: #ddd;
+    background-color: #ddd;
+    background-color: rgba(221, 221, 221, 0.9);
     color: #333;
     text-decoration: none;
     font-family: Helvetica, "Segoe UI", Calibri, Arial, sans-serif;
+    background-attachment: scroll;
+    background-position: 0% 50%;
+    background-repeat: no-repeat;
     width: 10em;
 }
 ul#_addTouchMenu li a._addTouchSelected {
     font-weight: bold;
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAYAAABiDJ37AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My41LjbQg61aAAAAvUlEQVQ4T2NgGGSAG+ieDCCuoNRdLEADDID4CBB/BeJLQCxNrqFsQI0hQPwEiJ8B8UwgjiLXMEagxlCoYTeBtAMQcxFrGMglyABkmAcQfwPifUAsR6xBIHU2QLwAiLOBmBOq0RgaVqeBtBYQgywgGhgCVe4B4i9AXArEwkA8B+o6Z6JNQVMoD+QfB+J3QFwDNQzkarIBE1CnNxA/AuJPQPwCiG3JNg1JYzKQDUprS4FYgBoGghKxCxBrEGMYAMKfHI0qJO1mAAAAAElFTkSuQmCC);
 }
 ul#_addTouchMenu li a:hover {
-    background: #fff;
+    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.9);
     color: #000;
 }
