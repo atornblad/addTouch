@@ -354,6 +354,7 @@
         if (a.currentTouch) {
             a.currentTouch._addTouchDiv.className = "_addTouchSpot";
             a.currentTouch = null;
+            a.touches = {};
         }
         return false;
     };
