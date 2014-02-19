@@ -14,7 +14,7 @@
         }
     }
 
-    if (!addTouchValue) { return };
+    if (!addTouchValue) { return; }
     
     window._addTouch = {};
     var a = window._addTouch;
@@ -354,7 +354,6 @@
         if (a.currentTouch) {
             a.currentTouch._addTouchDiv.className = "_addTouchSpot";
             a.currentTouch = null;
-            a.touches = {};
         }
         return false;
     };
